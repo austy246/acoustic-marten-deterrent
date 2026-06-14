@@ -19,8 +19,10 @@ sudo apt-get install -y libportaudio2 python3-venv
 echo "==> Vytvářím venv .venv…"
 python3 -m venv "${PROJECT_DIR}/.venv"
 "${PROJECT_DIR}/.venv/bin/pip" install --upgrade pip
-echo "==> Instaluji numpy + sounddevice…"
-"${PROJECT_DIR}/.venv/bin/pip" install numpy sounddevice
+echo "==> Instaluji projekt + závislosti (numpy, sounddevice)…"
+# Nainstaluje balíček marten_deterrent (src/ layout) i s závislostmi z pyproject,
+# aby šlo spustit `python -m marten_deterrent` odkudkoli.
+"${PROJECT_DIR}/.venv/bin/pip" install -e "${PROJECT_DIR}"
 
 # 3) Config — vytvoř z příkladu, pokud ještě není.
 if [ ! -f "${PROJECT_DIR}/config.ini" ]; then
