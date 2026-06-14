@@ -1,0 +1,20 @@
+[Unit]
+Description=Acoustic marten deterrent (randomised, habituation-resistant sound)
+After=sound.target
+
+[Service]
+Type=simple
+# Uprav User na svého hlavního uživatele (musí být ve skupině 'audio').
+User=pi
+# Uprav cestu, pokud jsi projekt naklonoval jinam.
+WorkingDirectory=/home/pi/acoustic-marten-deterrent
+ExecStart=/home/pi/acoustic-marten-deterrent/.venv/bin/python -m marten_deterrent --config /home/pi/acoustic-marten-deterrent/config.ini
+# Čistý shutdown — proces sám zastaví přehrávání na SIGTERM.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+Restart=on-failure
+RestartSec=5
+# Stavový soubor /run/marten/state vytvoří aplikace sama.
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acoustic-marten-deterrent"
+version = "1.0.0"
+description = "Raspberry Pi acoustic deterrent that drives stone martens out of buildings with randomised, habituation-resistant sound."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "austy246" }]
+keywords = ["raspberry-pi", "audio", "deterrent", "marten", "sounddevice"]
+dependencies = [
+    "numpy>=1.19",
+    "sounddevice>=0.4.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/austy246/acoustic-marten-deterrent"
+
+[project.scripts]
+marten-deterrent = "marten_deterrent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.black]
+line-length = 100
