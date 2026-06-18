@@ -40,7 +40,10 @@ def _resolve_device(audio_device: str) -> Optional[Union[int, str]]:
 class SoundEngine:
     """Generátor plašicích zvukových prvků."""
 
-    ELEMENTS: List[ElementName] = ["chirp", "trill", "noise", "tone"]
+    ELEMENTS: List[ElementName] = [
+        "chirp", "trill", "noise", "tone",
+        "warble", "beat", "am_buzz", "stutter",
+    ]
 
     def __init__(self, cfg: Config, rng: Optional[random.Random] = None) -> None:
         self.cfg = cfg
@@ -120,6 +123,46 @@ class SoundEngine:
         t = self._t(n)
         return np.sin(2 * np.pi * self._clamp_freq(f) * t)
 
+    def warble(self, dur: float, fc: float, depth: float, rate: float) -> np.ndarray:
+        """Houkačka — sirénovité kolísání frekvence (FM) kolem ``fc``.
+
+        Okamžitá frekvence je ``fc + depth*sin(2π·rate·t)``; fáze je jejím
+        integrálem (jinak by ve zvuku cvakalo).
+        """
+        n = max(1, int(dur * self.sr))
+        t = self._t(n)
+        fc = self._clamp_freq(fc)
+        phase = 2 * np.pi * fc * t - (depth / rate) * np.cos(2 * np.pi * rate * t)
+        return np.sin(phase)
+
+    def beat(self, dur: float, f1: float, beat_hz: float) -> np.ndarray:
+        """Záznějový pár — dva blízké tóny → drsné kolísání amplitudy."""
+        n = max(1, int(dur * self.sr))
+        t = self._t(n)
+        f1 = self._clamp_freq(f1)
+        f2 = self._clamp_freq(f1 + beat_hz)
+        return np.sin(2 * np.pi * f1 * t) + np.sin(2 * np.pi * f2 * t)
+
+    def am_buzz(self, dur: float, f: float, mod: float) -> np.ndarray:
+        """Drsný bzučák — tón plně amplitudově modulovaný rychlou frekvencí."""
+        n = max(1, int(dur * self.sr))
+        t = self._t(n)
+        carrier = np.sin(2 * np.pi * self._clamp_freq(f) * t)
+        envelope = 0.5 * (1.0 + np.sin(2 * np.pi * mod * t))
+        return carrier * envelope
+
+    def stutter(self, dur: float, f: float, gate_rate: float) -> np.ndarray:
+        """Sekaný (machine-gun) tón — rychlé zapínání/vypínání.
+
+        Hradlo je oříznutá sinusovka (krátké náběhy místo ostrých hran), ať
+        repro tolik necvaká.
+        """
+        n = max(1, int(dur * self.sr))
+        t = self._t(n)
+        base = np.sin(2 * np.pi * self._clamp_freq(f) * t)
+        gate = np.clip(np.sin(2 * np.pi * gate_rate * t) * 3.0, 0.0, 1.0)
+        return base * gate
+
     # ----- náhodný prvek -----
 
     def random_element(self) -> np.ndarray:
@@ -141,6 +184,27 @@ class SoundEngine:
             center = self._rand_freq()
             bw = self.rng.uniform(800.0, 4000.0)
             sig = self.noise(dur, center - bw / 2.0, center + bw / 2.0)
+        elif kind == "warble":
+            dur = self.rng.uniform(0.6, 2.0)
+            fc = self._rand_freq()
+            depth = self.rng.uniform(400.0, 2000.0)
+            rate = self.rng.uniform(2.0, 8.0)
+            sig = self.warble(dur, fc, depth, rate)
+        elif kind == "beat":
+            dur = self.rng.uniform(0.8, 2.5)
+            f1 = self._rand_freq()
+            beat_hz = self.rng.uniform(3.0, 12.0)
+            sig = self.beat(dur, f1, beat_hz)
+        elif kind == "am_buzz":
+            dur = self.rng.uniform(0.5, 1.6)
+            f = self._rand_freq()
+            mod = self.rng.uniform(30.0, 90.0)
+            sig = self.am_buzz(dur, f, mod)
+        elif kind == "stutter":
+            dur = self.rng.uniform(0.6, 1.8)
+            f = self._rand_freq()
+            gate = self.rng.uniform(8.0, 20.0)
+            sig = self.stutter(dur, f, gate)
         else:  # tone
             dur = self.rng.uniform(0.3, 1.2)
             f = self._rand_freq()
